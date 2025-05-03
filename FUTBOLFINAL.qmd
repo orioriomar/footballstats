@@ -1,0 +1,209 @@
+---
+title: "Football Player Stats"
+author: "Omar Khattab"
+format: html
+---
+
+# Introduction
+
+For this project, I used the **2022–2023 Football Player Stats** dataset. The dataset includes performance statistics for football players across European club teams.
+
+The 3 questions:
+
+1. Do Brazilian players score more goals or italian players.
+
+^^Do South American players score significantly more goals than European players?
+^^(This will be done by grouping players into 2 (Europeans) and (South Americans)
+
+2. Is there a relationship between minutes played and goals scored?
+
+3. Do more completed passed into the 18 yard box result in more assists?
+
+# Data Description
+
+Here are the key variables:
+
+- `Name`: Player’s name  
+- `Nation`: Country of the player  
+- `Goals`: Number of goals scored  
+- `MinutesPlayed`: Total minutes played  
+- `Position`: Playing position (e.g., FW, MF, DF)  
+- `Age`: Player's age
+- `PPA` : Completed passes into the 18-yard box
+
+
+```{r}
+library(tidyverse)
+
+players <- read_delim("2022-2023-Football-Player-Stats.csv", delim = ";")
+glimpse(players)
+
+```
+
+
+Distribution of Goals by Player Position
+```{r}
+ggplot(players, aes(x = Pos, y = Goals)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(
+    title = "Distribution of Goals by Player Position",
+    x = "Position",
+    y = "Goals Scored"
+  ) +
+  theme_minimal()
+
+```
+
+Histogram of Number of Players from Argentina Brazil and Italy
+
+```{r}
+filtered_players <- players %>%
+  filter(Nation %in% c("ARG", "BRA", "FRA"))
+
+ggplot(filtered_players, aes(x = Nation)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Number of Players: Argentina, Brazil, and Italy",
+       x = "Nation",
+       y = "Player Count") +
+  theme_minimal()
+```
+
+
+Relationship between Minutes played and Goals scored
+```{r}
+ggplot(players, aes(x =Min, y = Goals)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Relationship Between Minutes Played and Goals Scored",
+    x = "Minutes Played",
+    y = "Goals Scored"
+  ) +
+  theme_minimal()
+
+attackers <- players %>%
+  filter(Pos == "FW")  
+
+# Correlation between minutes played and goals scored (for attackers)
+ggplot(attackers, aes(x = Min, y = Goals)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Relationship Between Minutes Played and Goals Scored (Attackers)",
+    x = "Minutes Played",
+    y = "Goals Scored"
+  ) +
+  theme_minimal()
+
+# Filtering only attackers who played at least 900 minutes
+forwards <- players %>%
+  filter(Pos == "FW", Min >= 900)
+
+ggplot(forwards, aes(x = Min, y = Goals)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Relationship Between Minutes Played and Goals Scored (Attackers, Min 500 Mins)",
+    x = "Minutes Played",
+    y = "Goals Scored"
+  ) +
+  theme_minimal()
+
+```
+
+
+Running two sample T-test on brazilian players based on position
+```{r}
+
+players %>%
+  filter(Nation == "BRA") %>%
+  group_by(Pos) %>%
+  summarise(
+    mean_goals = mean(Goals, na.rm = TRUE),
+    sd_goals = sd(Goals, na.rm = TRUE),
+    min_goals = min(Goals, na.rm = TRUE),
+    max_goals = max(Goals, na.rm = TRUE)
+  )
+
+```
+1. Do Brazilian players score more goals or italian players.
+
+```{r}
+
+brazil_italy <- players %>%
+  filter(Nation %in% c("BRA", "ITA"))
+
+t.test(Goals ~ Nation, data = brazil_italy)
+
+
+players <- players %>%
+  mutate(Continent = case_when(
+    Nation %in% c("BRA", "ARG", "URU", "COL", "CHI", "ECU", "PER", "PAR", "VEN", "BOL") ~ "South America",
+    Nation %in% c("ITA", "GER", "FRA", "ESP", "POR", "ENG", "BEL", "NED", "CRO", "SWE",
+                  "SUI", "DEN", "NOR", "POL", "AUT", "GRE", "SRB", "SCO", "UKR", "CZE") ~ "Europe",
+    TRUE ~ "Other"
+  ))
+
+
+south_europe <- players %>%
+  filter(Continent %in% c("South America", "Europe"))
+
+t.test(Goals ~ Continent, data = south_europe)
+
+
+```
+
+
+Do more completed passes into 18 yard box result in more assists?
+```{r}
+
+
+ggplot(players, aes(x = PPA, y = Assists)) +
+  geom_point(alpha = 0.6, color = "darkgreen") +
+  geom_smooth(method = "lm", se = TRUE, color = "orange") +
+  labs(
+    title = "Relationship Between Passes Into Box and Assists",
+    x = "Completed Passes Into 18-Yard Box",
+    y = "Assists"
+  ) +
+  theme_minimal()
+
+ggplot(players, aes(x = PPA, y = Assists)) +
+  geom_point(alpha = 0.6, color = "darkgreen") +
+  geom_smooth(method = "lm", se = TRUE, color = "orange") +
+  labs(
+    title = "Relationship Between Passes Into Box and Assists",
+    x = "Completed Passes Into 18-Yard Box",
+    y = "Assists"
+  ) +
+  theme_minimal()
+
+players_filtered <- players %>%
+  filter(PPA >= 1.2)
+
+ggplot(players_filtered, aes(x = PPA, y = Assists)) +
+  geom_point(alpha = 0.6, color = "purple") +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(
+    title = "Completed Passes Into Box vs Assists (PPA ≥ 0.3)",
+    x = "Completed Passes Into 18-Yard Box (CrsPA)",
+    y = "Assists"
+  ) +
+  theme_minimal()
+
+
+
+
+```
+
+
+Conclusion
+
+
+I performed a two-sample t-test comparing the number of goals scored by Brazilian and Italian players. The p-value was 0.023, indicating a statistically significant difference.
+On average, Brazilian players scored more goals (1.36) than Italian players (0.84).However when I tried with European and South American players it was very similar and not statistically significant (p=1.05)
+
+There is a relationship between more minutes played and goals scored. The more you play the more likely you are to score atleast for attackers.
+
+I could not really draw a result from the PPA and assists.
+
